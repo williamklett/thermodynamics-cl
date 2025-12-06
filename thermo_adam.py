@@ -24,8 +24,7 @@ class WorkAdam(Optimizer):
         W_{t,i}    &= \big| g_{t,i}\, \Delta\theta_{t,i} \big| \\
         M_{t,i}    &= \rho M_{t-1,i} + (1 - \rho)\, W_{t,i} \\
         \hat m_t   &= m_t / (1 - \beta_1^t) \\
-        \theta_t   &= \theta_{t-1}
-                      - \eta\, \hat m_t / \big( \sqrt{M_t} + \varepsilon \big)
+        \theta_t   &= \theta_{t-1} - \eta \frac{\hat m_t}{\sqrt{M_t} + \varepsilon}
 
     Here :math:`M_t` is a smoothed *recent work* per coordinate. Spikes in
     :math:`M_t` or its derivatives are candidates for task-switching signals.
@@ -54,11 +53,12 @@ class WorkAdam(Optimizer):
         rho: float = 0.99,
         eps: float = 1e-8,
         weight_decay: float = 0.0,
-        *,
+        *,  # keyword-only arguments
         decoupled_weight_decay: bool = True,
         maximize: bool = False,
         mass_init: float = 1e-3,
     ) -> None:
+        # Basic sanity checks (mirroring torch.optim.Adam style)
         if lr < 0.0:
             raise ValueError(f"Invalid learning rate: {lr}")
         if not 0.0 <= beta1 < 1.0:
@@ -152,7 +152,7 @@ class WorkAdam(Optimizer):
                         # L2 penalty folded into gradient
                         grad = grad.add(p.data, alpha=weight_decay)
 
-                # First moment: m_t
+                # m_t
                 exp_avg.mul_(beta1).add_(grad, alpha=1.0 - beta1)
 
                 # Bias correction for m_t
@@ -165,11 +165,11 @@ class WorkAdam(Optimizer):
                 # Parameter update
                 p.data.addcdiv_(exp_avg_hat, denom, value=-lr)
 
-                # --- Now compute work for this step using Δθ_t = θ_t - θ_{t-1} ---
+                # Δθ_t = θ_t - θ_{t-1}
                 displacement = p.data - prev_param
                 work = (grad * displacement).abs()
 
-                # EMA of work: M_t = ρ M_{t-1} + (1 - ρ) W_t
+                # M_t = ρ M_{t-1} + (1 - ρ) W_t
                 mass.mul_(rho).add_(work, alpha=1.0 - rho)
 
                 # Store current params as previous for next step
