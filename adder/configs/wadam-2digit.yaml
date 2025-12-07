@@ -29,6 +29,6 @@ trainer:
     name: workadam
     lr: 5e-4
     beta1: 0.9
-    rho: 0.99
+    rho: 0.9925
     weight_decay: 0.1
     mass_init: 1e-3

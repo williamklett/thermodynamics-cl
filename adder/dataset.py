@@ -29,44 +29,54 @@ def generate_arithmetic_problems(
 
 class ArithmeticDataset(Dataset):
     """
+    Args:
+        config: must have `ndigit` (problem difficulty)
+        split: "train" or "test"
+        max_ndigit: if provided, pad sequences to this size (for continual learning)
     """
 
-    def __init__(self, config, split):
+    def __init__(self, config, split, max_ndigit: int = None):
         self.config = config
+        self.ndigit = config.ndigit
+        self.max_ndigit = max_ndigit if max_ndigit is not None else self.ndigit
 
         ixes = generate_arithmetic_problems(self.config)
         self.ixes = ixes[split]
 
     def get_vocab_size(self) -> int:
-        # digits 0..9, plus '-' token (10) for subtraction
+        # digits 0..9
         return 10
 
     def get_block_size(self) -> int:
+        # Use max_ndigit for consistent sequence length
         # a,b,a+b
         # +1 (due to potential carry overflow)
         # -1 (last digit doesn't ever plug back)
-        return 3 * self.config.ndigit + 1 - 1
+        return 3 * self.max_ndigit + 1 - 1
 
     def __len__(self):
         return self.ixes.nelement()
 
     def __getitem__(self, idx):
-        ndigit = self.config.ndigit
-        # given a problem index idx, first recover the associated a + b
+        ndigit = self.ndigit
+        max_ndigit = self.max_ndigit
+        
+        # Recover the a + b problem from index
         idx = self.ixes[idx].item()
         nd = 10**ndigit
         a = idx // nd
-        b = idx %  nd
-        # calculate the "label" of the addition problem a + b
+        b = idx % nd
         c = a + b
-        # encode the digits of a, b, c into strings
-        astr = f'%0{ndigit}d' % a
-        bstr = f'%0{ndigit}d' % b
-        cstr = (f'%0{ndigit+1}d' % c)[::-1] # reverse c to make addition easier
+        
+        # Pad to max_ndigit format for consistent positional encoding
+        astr = f'%0{max_ndigit}d' % a
+        bstr = f'%0{max_ndigit}d' % b
+        cstr = (f'%0{max_ndigit+1}d' % c)[::-1]  # reversed
+        
         render = astr + bstr + cstr
-        dix = [int(s) for s in render] # convert each character to its token index
-        # x will be input to GPT and y will be the associated expected outputs
+        dix = [int(s) for s in render]
+        
         x = torch.tensor(dix[:-1], dtype=torch.long)
-        y = torch.tensor(dix[1:], dtype=torch.long) # predict the next token in the sequence
-        y[:ndigit*2-1] = -1 # we will only train in the output locations. -1 will mask loss to zero
+        y = torch.tensor(dix[1:], dtype=torch.long)
+        y[:max_ndigit*2-1] = -1  # mask input positions
         return x, y
