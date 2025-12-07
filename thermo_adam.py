@@ -144,13 +144,10 @@ class WorkAdam(Optimizer):
                 step: int = state["step"]
 
                 # Weight decay
-                if weight_decay != 0.0:
-                    if decoupled_wd:
-                        # AdamW-style: separate shrink
-                        p.data.add_(p.data, alpha=-lr * weight_decay)
-                    else:
-                        # L2 penalty folded into gradient
-                        grad = grad.add(p.data, alpha=weight_decay)
+                # L2-style (coupled) decay is folded into the gradient,
+                # so it *does* contribute to work.
+                if weight_decay != 0.0 and not decoupled_wd:
+                    grad = grad.add(p.data, alpha=weight_decay)
 
                 # m_t
                 exp_avg.mul_(beta1).add_(grad, alpha=1.0 - beta1)
@@ -165,14 +162,19 @@ class WorkAdam(Optimizer):
                 # Parameter update
                 p.data.addcdiv_(exp_avg_hat, denom, value=-lr)
 
-                # Δθ_t = θ_t - θ_{t-1}
-                displacement = p.data - prev_param
-                work = (grad * displacement).abs()
+                # Δθ_t = θ_t(grad step) - θ_{t-1}
+                update = -lr * exp_avg_hat / (mass.sqrt() + eps)
+                work = (grad * update).abs()
 
                 # M_t = ρ M_{t-1} + (1 - ρ) W_t
                 mass.mul_(rho).add_(work, alpha=1.0 - rho)
 
-                # Store current params as previous for next step
+                # Now apply decoupled weight decay *after* work is measured,
+                # so shrinkage does not contribute to the thermodynamic mass.
+                if weight_decay != 0.0 and decoupled_wd:
+                    p.data.add_(p.data, alpha=-lr * weight_decay)
+
+                # Store current (post-decay) params as previous for next step
                 prev_param.copy_(p.data)
 
         return loss
