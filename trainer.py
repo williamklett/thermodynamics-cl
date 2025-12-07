@@ -16,6 +16,7 @@ OPT_FUNC = {
     "workadam": WorkAdam,
 }
 
+
 @dataclass
 class TrainerConfig:
     device: str = "auto"
@@ -34,10 +35,16 @@ class Trainer:
         self.config = config
         self.model = model
         # Extract optimizer class + kwargs
-        opt_cfg = dict(config.optimizer)  # shallow copy (handles OmegaConf.DictConfig too)
-        opt_name = opt_cfg.pop("name")   # remove 'name' so it doesn't get passed as kwarg
+        opt_cfg = dict(
+            config.optimizer
+        )  # shallow copy (handles OmegaConf.DictConfig too)
+        opt_name = opt_cfg.pop(
+            "name"
+        )  # remove 'name' so it doesn't get passed as kwarg
         if opt_name not in OPT_FUNC:
-            raise ValueError(f"Unknown optimizer '{opt_name}'. Expected one of {list(OPT_FUNC.keys())}.")
+            raise ValueError(
+                f"Unknown optimizer '{opt_name}'. Expected one of {list(OPT_FUNC.keys())}."
+            )
         self.optimizer_cls = OPT_FUNC[opt_name]
         self.optimizer_kwargs = opt_cfg
 
@@ -64,7 +71,7 @@ class Trainer:
                 self.train_dataset, replacement=True, num_samples=int(1e10)
             ),
             shuffle=False,
-            pin_memory=True, # faster transfers to GPU
+            pin_memory=True,  # faster transfers to GPU
             batch_size=config.batch_size,
             num_workers=config.num_workers,
         )
@@ -79,6 +86,7 @@ class Trainer:
     def trigger_callbacks(self, onevent: str):
         for callback in self.callbacks.get(onevent, []):
             callback(self)
+
     def get_batch(self):
         try:
             batch = next(self.data_iter)
@@ -93,7 +101,9 @@ class Trainer:
         model, config = self.model, self.config
 
         # setup the optimizer
-        self.optimizer = model.configure_optimizers(self.optimizer_cls, self.optimizer_kwargs)
+        self.optimizer = model.configure_optimizers(
+            self.optimizer_cls, self.optimizer_kwargs
+        )
 
         model.train()
         self.iter_num = 0

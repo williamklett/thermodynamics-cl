@@ -205,7 +205,10 @@ class GPT(nn.Module):
         decay_params = [p for n, p in param_dict.items() if p.dim() >= 2]
         nodecay_params = [p for n, p in param_dict.items() if p.dim() < 2]
         optim_groups = [
-            {"params": decay_params, "weight_decay": optimizer_kwargs.get("weight_decay", 0.0)},
+            {
+                "params": decay_params,
+                "weight_decay": optimizer_kwargs.get("weight_decay", 0.0),
+            },
             {"params": nodecay_params, "weight_decay": 0.0},
         ]
         num_decay_params = sum(p.numel() for p in decay_params)

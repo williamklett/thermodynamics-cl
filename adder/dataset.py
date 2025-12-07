@@ -16,13 +16,13 @@ def generate_arithmetic_problems(
         Dict with keys "train" and "test" containing the indices of the train and test sets.
     """
     ndigit = config.ndigit
-    num = (10**ndigit)**2
+    num = (10**ndigit) ** 2
 
     rng = torch.Generator()
     rng.manual_seed(1337)
     perm = torch.randperm(num, generator=rng)
 
-    num_test = min(int(num*0.2), 500) # 20% of the whole dataset, or only up to 500
+    num_test = min(int(num * 0.2), 500)  # 20% of the whole dataset, or only up to 500
 
     return {"train": perm[num_test:], "test": perm[:num_test]}
 
@@ -60,23 +60,23 @@ class ArithmeticDataset(Dataset):
     def __getitem__(self, idx):
         ndigit = self.ndigit
         max_ndigit = self.max_ndigit
-        
+
         # Recover the a + b problem from index
         idx = self.ixes[idx].item()
         nd = 10**ndigit
         a = idx // nd
         b = idx % nd
         c = a + b
-        
+
         # Pad to max_ndigit format for consistent positional encoding
-        astr = f'%0{max_ndigit}d' % a
-        bstr = f'%0{max_ndigit}d' % b
-        cstr = (f'%0{max_ndigit+1}d' % c)[::-1]  # reversed
-        
+        astr = f"%0{max_ndigit}d" % a
+        bstr = f"%0{max_ndigit}d" % b
+        cstr = (f"%0{max_ndigit+1}d" % c)[::-1]  # reversed
+
         render = astr + bstr + cstr
         dix = [int(s) for s in render]
-        
+
         x = torch.tensor(dix[:-1], dtype=torch.long)
         y = torch.tensor(dix[1:], dtype=torch.long)
-        y[:max_ndigit*2-1] = -1  # mask input positions
+        y[: max_ndigit * 2 - 1] = -1  # mask input positions
         return x, y
