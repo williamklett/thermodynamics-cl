@@ -1,3 +1,7 @@
 **/__pycache__/
 out/
 .venv/
+.DS_Store
+**/.DS_Store
+data/
+*.pdf
