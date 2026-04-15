@@ -30,6 +30,7 @@ import torchvision.transforms as transforms
 from thermo_adam import WorkAdam
 from gated_thermo_adamw import GatedThermoAdamW
 from snr_adam import SNRAdam
+from adabelief import AdaBelief
 
 
 # ── Model ─────────────────────────────────────────────────────────────────────
@@ -126,6 +127,9 @@ def run(args):
     elif args.optimizer == "snr":
         optimizer = SNRAdam(model.parameters(), lr=args.lr,
                             weight_decay=args.weight_decay)
+    elif args.optimizer == "adabelief":
+        optimizer = AdaBelief(model.parameters(), lr=args.lr,
+                              weight_decay=args.weight_decay)
     else:
         raise ValueError(f"Unknown optimizer: {args.optimizer}")
 
@@ -256,7 +260,7 @@ def plot_results(log_path, work_dir, optimizer_name, n_tasks):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--optimizer", default="adamw",
-                        choices=["adamw", "workadam", "gatedthermo", "snr"])
+                        choices=["adamw", "workadam", "gatedthermo", "snr", "adabelief"])
     parser.add_argument("--n_tasks",      type=int,   default=10)
     parser.add_argument("--lr",           type=float, default=1e-3)
     parser.add_argument("--weight_decay", type=float, default=1e-4)

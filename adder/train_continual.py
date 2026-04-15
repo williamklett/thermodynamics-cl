@@ -20,6 +20,7 @@ from adder.dataset import ArithmeticDataset
 from thermo_adam import WorkAdam
 from gated_thermo_adamw import GatedThermoAdamW
 from snr_adam import SNRAdam
+from adabelief import AdaBelief
 
 
 @dataclass
@@ -143,6 +144,11 @@ def run_continual_experiment(
         )
     elif optimizer_name == "snr":
         optimizer = SNRAdam(
+            model.parameters(),
+            lr=lr, weight_decay=weight_decay,
+        )
+    elif optimizer_name == "adabelief":
+        optimizer = AdaBelief(
             model.parameters(),
             lr=lr, weight_decay=weight_decay,
         )
@@ -304,7 +310,7 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--optimizer", type=str, default="adamw",
-                        choices=["adamw", "workadam", "gatedthermo", "snr"])
+                        choices=["adamw", "workadam", "gatedthermo", "snr", "adabelief"])
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--lr", type=float, default=5e-4)
     parser.add_argument("--rho", type=float, default=0.99, help="WorkAdam: mass EMA decay")
